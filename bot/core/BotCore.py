@@ -21,7 +21,7 @@ from bot.commands import Commands
 import json
 import os
 
-class BotCore(Commands.Commands):
+class BotCore():
     """
     The BotCore class will serve as the central location
     for all of the Discord Bot's central functions.
@@ -47,13 +47,12 @@ class BotCore(Commands.Commands):
             self.settings.loadSettings(BotGlobals.LOCAL_SETTINGS_FILENAME, override=True)
 
         # Get language with default fallback
-        global LANGUAGE         #lazy fix for a bug
-        LANGUAGE = self.settings.getSetting('language')
-        if not LANGUAGE:
-            LANGUAGE = 'en-us'
+        language = self.settings.getSetting('language')
+        if not language:
+            language = 'en-us'
 
         # Initialize the BotLocalizer class.
-        localizer = BotLocalizer.BotLocalizer(self.settings.getSetting('debug'), self.settings.getSetting('autoTranslate'), LANGUAGE)
+        localizer = BotLocalizer.BotLocalizer(self.settings.getSetting('debug'), self.settings.getSetting('autoTranslate'), language)
 
         # Import language module
         localizer.importLanguageModule()
@@ -65,13 +64,14 @@ class BotCore(Commands.Commands):
 
         self.bot = commands.Bot(description=BotLocalizer.APP_DESCRIPTION, command_prefix=self.settings.getSetting('commandPrefix'), intents=intents)
         self.bot.remove_command('help')
+        
 
         # Initialize taskMgr.
         self.taskMgr = BotTasks.BotTasks(self.settings.getSetting('maxNewsAricles'), self.settings.getSetting('debug'), self.settings.getSetting('language'), self.settings.getSetting('maxReleaseNotes'))
         self.taskMgr.initializeTasks(BotGlobals.BOT_TASKS)
 
-        # Initialize the Commands class.
-        Commands.Commands.__init__(self)
+        self.bot.taskMgr = self.taskMgr
+        self.bot.settings = self.settings
 
         @self.bot.event
         async def on_ready():
@@ -86,11 +86,18 @@ class BotCore(Commands.Commands):
             print(':BotCore: Connected.')
             print(":BotCore: Logged in as user '%s' with ID '%s'" % (self.bot.user.name, self.bot.user.id))
 
+            try:
+                await self.bot.load_extension('bot.commands.Commands')
+                print(':BotCore: Loaded commands.')
+                await self.bot.tree.sync()
+                print(':BotCore: Synced commands.')
+            except Exception as e:
+                print(f":BotCore: Error loading commands: {e}")
+
             # This bot is not in any servers yet, let's print the URL that they would use
             # to add the bot to a server.  Just in case they don't know it.
             if len(self.bot.guilds) == 0:
                 print(":BotCore: To connect this bot to a server, please use the following url:\n")
-                print('    https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=8' % self.bot.user.id)
-                #! UPDATE BOT SCOPE SO IT DOESNT NEED SERVER ADMIN ACCESS
+                print('    https://discordapp.com/oauth2/authorize?client_id=%s&permissions=580553413979200&integration_type=0&scope=applications.commands+bot' % self.bot.user.id)
 
             print(':BotCore: %s' % BotLocalizer.APP_DESCRIPTION)
