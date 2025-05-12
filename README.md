@@ -4,19 +4,17 @@ Public Discord bot that utilizes [TLOPO's APIs](https://thelegendofpiratesonline
 ## Commands
 | Command | Description |
 |---------|-------------|
-| `!help` | Returns a list of all commands. |
-| `!news` | Returns latest news articles. |
-| `!releases` | Returns latest releases. |
-| `!about` | Returns information about the bot. |
-| `!status` | Returns current server status. |
-| `!fullstatus` | Returns current server status with more details. |
-| `!invasions` | Returns active invasions. |
-| `!fleets` | Returns active fleets. |
-| `!oceans` | Returns server populations. |
-| `!notices` | Returns any server notices. |
-| `!notifications` | Returns the current news banner on the TLOPO website. |
-
-*Default command prefix used to show commands*
+| `/help` | Returns a list of all commands. |
+| `/news` | Returns latest news articles. |
+| `/releases` | Returns latest releases. |
+| `/about` | Returns information about the bot. |
+| `/status` | Returns current server status. |
+| `/status-detailed` | Returns current server status with more details. |
+| `/invasions` | Returns active invasions. |
+| `/fleets` | Returns active fleets. |
+| `/oceans` | Returns server populations. |
+| `/notices` | Returns any server notices. |
+| `/notifications` | Returns the current news banner on the TLOPO website. |
 
 ## Prerequisites
 To run this Discord bot, you need to have Python 3 installed on your system. You can download the latest version [here](https://www.python.org/downloads/).
@@ -39,7 +37,7 @@ The following outlines how to configure `settings.json`:
     - Portuguese (Portugal) (`pt-pt`)
 
     If you prefer the bot to output in a different language, it has a built-in auto-translate feature. Just enter the full language name into the `language` field, and set `autoTranslate` to `True`.
-3. Set your desired command prefix by modifying the `commandPrefix` field.
+3. Set your desired command prefix by modifying the `commandPrefix` field. Note that either the prefix or `/` can be used to call commands.
 4. If you want others to be able to add the bot to their Discord servers, set the installation link in the `link` field, and set `showLink` to `True`.  
    The link will be shown in the bot's `!about` command.
 5. Set your desired maximum number of releases and news articles to be shown in the `maxReleaseNotes` and `maxNewsAricles` fields in `settings.json`.
