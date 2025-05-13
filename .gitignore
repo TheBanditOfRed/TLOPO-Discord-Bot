@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 BotLocalizer_*_AT.py
 BotReleaseNotes_*_*.json
+BotStaticEmbeds.json
 
 # Mac stuff.
 *.DS_STORE

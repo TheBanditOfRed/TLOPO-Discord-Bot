@@ -65,7 +65,6 @@ class BotCore():
         self.bot = commands.Bot(description=BotLocalizer.APP_DESCRIPTION, command_prefix=self.settings.getSetting('commandPrefix'), intents=intents)
         self.bot.remove_command('help')
         
-
         # Initialize taskMgr.
         self.taskMgr = BotTasks.BotTasks(self.settings.getSetting('maxNewsAricles'), self.settings.getSetting('debug'), self.settings.getSetting('language'), self.settings.getSetting('maxReleaseNotes'))
         self.taskMgr.initializeTasks(BotGlobals.BOT_TASKS)

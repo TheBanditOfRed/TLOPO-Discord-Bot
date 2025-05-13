@@ -11,13 +11,11 @@
 
 import discord
 from discord import app_commands
-from discord.ext import commands
-
+from discord.ext import commands, tasks
 from bot.language import BotLocalizer, BotTranslate
-from bot.core import BotGlobals, BotCore
+from bot.core import BotGlobals
 from bot.commands import Buttons
-
-from datetime import datetime
+from bot.commands import BotStaticEmbedManager
 
 class Commands(commands.Cog):
     """
@@ -29,11 +27,14 @@ class Commands(commands.Cog):
     """
 
     # TODO: Rewrite to be cleaner.
+    # TODO: Add new strings to BotLocalizer files
 
     def __init__(self, bot):
         self.bot = bot
         self.taskMgr = bot.taskMgr
         self.settings = bot.settings
+        self.staticEmbedMgr = BotStaticEmbedManager.StaticEmbedManager(bot)
+        self.check_for_updates.start()
 
     @commands.hybrid_command(
             name='help',
@@ -65,7 +66,8 @@ class Commands(commands.Cog):
                     desc = command.help
             else:
                 desc = BotLocalizer.STATUS_MESSAGES[0]
-            usage = "%s%s" % (ctx.prefix, name)  # Overcomplicating this incase a non string command is added in the future.
+
+            usage = "`%s%s`" % (ctx.prefix, name)
 
             # Add field for each command
             discord.Embed.add_field(
@@ -444,6 +446,125 @@ class Commands(commands.Cog):
             )
 
         await ctx.send(embed=embed)
+    
+    
+    @commands.hybrid_command(
+        name='static',
+        description= 'Create a static embed.'
+    )
+    @app_commands.choices(module=[
+        app_commands.Choice(name='status', value='status'),
+        app_commands.Choice(name='status-detailed', value='status-detailed'),
+        app_commands.Choice(name='news', value='news'),
+        app_commands.Choice(name='releases', value='releases'),
+        app_commands.Choice(name='help', value='help')
+    ])
+    async def static(self, ctx, module: str):
+        """
+        Create a static embed of one of the following modules:
+        - status
+        - status-detailed
+        - news
+        - releases
+        """
+
+        if module is None or module.lower() == 'help':
+            embed = discord.Embed(
+                title=BotGlobals.FORMAT_STRINGS.get('bold') % "Static Embed Modules",
+                description="Here are the available modules for the static command:",
+                color=BotGlobals.EMBED_COLOR.get('help')
+            )
+            
+            embed.add_field(
+                name="status",
+                value="Shows the current server status with emoji indicators",
+                inline=False
+            )
+            embed.add_field(
+                name="status-detailed",
+                value="Shows detailed server status information",
+                inline=False
+            )
+            embed.add_field(
+                name="news",
+                value="Shows the latest news articles",
+                inline=False
+            )
+            embed.add_field(
+                name="releases",
+                value="Shows the latest release notes",
+                inline=False
+            )
+            
+            embed.set_footer(text="Usage: %sstatic <module>" % ctx.prefix)
+            return await ctx.send(embed=embed)
+    
+        module = module.lower()
+
+        returnMsg = "Static embed created for %s in channel %s" % (module, ctx.channel.mention)
+
+        if module == 'status':
+            message = await self.status_embed(ctx)
+            await self.staticEmbedMgr.add_reference('status', message)
+            await ctx.send(returnMsg, ephemeral=True, delete_after=5)
+        elif module == 'status-detailed':
+            message = await self.fullstatus_embed(ctx)
+            await self.staticEmbedMgr.add_reference('status-detailed', message)
+            await ctx.send(returnMsg, ephemeral=True, delete_after=5)
+        elif module == 'news':
+            message = await self.news_embed(ctx)
+            await self.staticEmbedMgr.add_reference('news', message)
+            await ctx.send(returnMsg, ephemeral=True, delete_after=5)
+        elif module == 'releases':
+            message = await self.releases_embed(ctx)
+            await self.staticEmbedMgr.add_reference('releases', message)
+            await ctx.send(returnMsg, ephemeral=True, delete_after=5)
+        else:
+            embed = discord.Embed(
+                title=BotGlobals.FORMAT_STRINGS.get('bold') % 'Invalid Module',
+                description='%s is not a valid module. Use `%sstatic help` to see available modules.' % (module, ctx.prefix),
+                color=BotGlobals.EMBED_COLOR.get('error')
+            )
+            await ctx.send(embed=embed)
+    
+    # TBH this should be in BotTasks.py but for importing and innitialization it's easier to keep it here.
+    @tasks.loop(minutes=5)
+    async def check_for_updates(self):
+        """
+        Periodically check if data has changed and update static embeds
+        """
+
+        try:
+            if self.taskMgr.hasStatusChanged():
+                status_embed = await self._create_status_embed()
+                updated, failed = await self.staticEmbedMgr.update_all_embeds('status', status_embed)
+                print('Updated %s status embeds, %s failed' % (updated, failed))
+                
+                fullstatus_embed = await self._create_fullstatus_embed()
+                updated, failed = await self.staticEmbedMgr.update_all_embeds('status-detailed', fullstatus_embed)
+                print('Updated %s detailed status embeds, %s failed' % (updated, failed))
+            
+            if self.taskMgr.hasNewsChanged():
+                news_embed = await self._create_news_embed()
+                updated, failed = await self.staticEmbedMgr.update_all_embeds('news', news_embed)
+                print('Updated %s news embeds, %s failed' % (updated, failed))
+            
+            if self.taskMgr.hasReleasesChanged():
+                releases_embed = await self._create_releases_embed() 
+                updated, failed = await self.staticEmbedMgr.update_all_embeds('releases', releases_embed)
+                print('Updated %s release embeds, %s failed' % (updated, failed))
+    
+        except Exception as e:
+            print('Error in update task: %s' % e)
+
+    # On rare occasions the bot innitilizes the commands before the bot is even ready and bugs out, no clue why but this fixes it.
+    @check_for_updates.before_loop
+    async def before_check_updates(self):
+        """
+        Wait until the bot is ready before starting the update task
+        """
+
+        await self.bot.wait_until_ready()
 
     async def status_embed(self, ctx):
         """
@@ -457,7 +578,10 @@ class Commands(commands.Cog):
         ais = servers.get('oceans', [])
         uds = servers.get('gameserver_functions', [])
 
-        embed = discord.Embed(title=BotGlobals.FORMAT_STRINGS.get('bold') % BotLocalizer.EMBED_TITLES[8], color=BotGlobals.EMBED_COLOR.get('status'))
+        embed = discord.Embed(
+            title=BotGlobals.FORMAT_STRINGS.get('bold') % BotLocalizer.EMBED_TITLES[8],
+            color=BotGlobals.EMBED_COLOR.get('status')
+        )
 
         if not system_status.get('status', 0) == 3:
             # Loop through each server and add it to the embed.
@@ -548,7 +672,7 @@ class Commands(commands.Cog):
                     text= BotLocalizer.AUTO_TRANSLATE_WARNING,
                 )
 
-        await ctx.send(embed=embed)
+        return await ctx.send(embed=embed)
 
     async def fullstatus_embed(self, ctx):
         """
@@ -657,7 +781,7 @@ class Commands(commands.Cog):
                     text= BotLocalizer.AUTO_TRANSLATE_WARNING,
                 )
 
-        await ctx.send(embed=embed)
+        return await ctx.send(embed=embed)
 
     async def news_embed(self, ctx):
         """
@@ -673,13 +797,13 @@ class Commands(commands.Cog):
                 description=BotLocalizer.STATUS_MESSAGES[8],
                 color=BotGlobals.EMBED_COLOR.get('offline')
             )
-            await ctx.send(embed=embed)
+            return await ctx.send(embed=embed)
         
         else:
             view = Buttons.NewsButtons(news)
             embed = view.create_news_embed()
 
-            await ctx.send(embed=embed, view=view)
+            return await ctx.send(embed=embed, view=view)
     
     async def releases_embed(self, ctx):
         """
@@ -695,14 +819,14 @@ class Commands(commands.Cog):
                 description=BotLocalizer.STATUS_MESSAGES[8],
                 color=BotGlobals.EMBED_COLOR.get('offline')
             )
-            await ctx.send(embed=embed)
+            return await ctx.send(embed=embed)
         
         else:
             view = Buttons.ReleaseButtons(releases)
 
             embed = view.create_release_embed()
 
-            await ctx.send(embed=embed, view=view)
+            return await ctx.send(embed=embed, view=view)
 
 async def setup(bot):
     await bot.add_cog(Commands(bot))

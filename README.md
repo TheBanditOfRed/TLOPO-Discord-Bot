@@ -15,6 +15,7 @@ Public Discord bot that utilizes [TLOPO's APIs](https://thelegendofpiratesonline
 | `/oceans` | Returns server populations. |
 | `/notices` | Returns any server notices. |
 | `/notifications` | Returns the current news banner on the TLOPO website. |
+| `/static <module>` | Creates a static embed of the specified module. |
 
 ## Prerequisites
 To run this Discord bot, you need to have Python 3 installed on your system. You can download the latest version [here](https://www.python.org/downloads/).

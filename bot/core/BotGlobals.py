@@ -195,8 +195,9 @@ PROTECTED_WORDS = [
     'RELEASE_STRINGS',                  #63
 ]
 
-# Anything that is commented out will not output its debug information.
+#! Anything that is commented out will not output its debug information.
 DEBUG_MODULES = {
+    #* API Tasks
     #'task_news_notification',
     #'task_news_feed',
     #'task_system_status',
@@ -204,23 +205,47 @@ DEBUG_MODULES = {
     #'task_shards_fleets',
     #'task_shards_invasions',
     #'task_shards_populations',
-    'translated_news_feed',
-    'translate_localizer_add_items',
-    'translate_localizer_translate_items',
-    'clean_translation_errors',
+    'task_release_feed',
+    
+    #* Translation System
     'translate_localizer_stage_1',
     'translate_localizer_stage_2',
+    'translate_localizer_add_items',
+    'translate_localizer_translate_items',
+    'translate_string',
+    'help_translate',
+    'clean_translation_errors',
+    
+    #* Protected Words System
     'protect_words',
     'restore_protected_words',
     'restore_protected_words_replacements',
-    'translate_string',
-    'get_release_notes',
-    'get_release_notes_items',
-    'task_release_feed',
+    
+    #* Content Translation
+    'translated_news_feed',
+    'translated_news_notifications',
     'translated_release_item',
     'translated_release',
-    'translate_news_notifications',
-    'help_translate',
+    
+    #* Release Notes
+    'get_release_notes',
+    'get_release_notes_items',
     'getReleaseFeed',
     'create_release_notes_file',
+    
+    #* Reference System
+    #'load_references',
+    #'save_references',
+    #'add_reference',
+    #'remove_reference',
+    
+    #* Embed Updates
+    #'update_all_embeds',
+    #'update_all_embeds_channel',
+    #'update_all_embeds_message',
+    
+    #* Change Detection
+    #'hasStatusChanged',
+    #'hasNewsChanged',
+    #'hasReleasesChanged',
 }

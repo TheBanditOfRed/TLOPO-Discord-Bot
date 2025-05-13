@@ -25,20 +25,31 @@ class BotTasks:
     """
 
     def __init__(self, maxNewsAricles: int=5, debug: bool=False, language: str='en', maxReleaseNotes: int=5):
+        # Non static embed data
         self.activeFleets = {}
         self.activeInvasions = {}
         self.oceanPopulations = {}
+        self.newsNotifications = {}
+
+        # Static embed data
         self.systemStatus = {}
         self.newsFeed = []
-        self.newsNotifications = {}
         self.releaseFeed = {}
+
+        # Variables
         self.maxNewsAricles = maxNewsAricles
         self.debug = debug
         self.language = language
         self.maxReleaseNotes = maxReleaseNotes
         self.releaseNotesPath = None
 
-    def initializeTasks(self, tasks):
+    def initializeTasks(self, tasks: dict) -> None:
+        """
+        Initialize recurring tasks for the bot.
+        
+        Args:
+            tasks (dict): Dictionary of tasks to initialize.
+        """
         print(":BotTasks: Initializing tasks...")
 
         for task in tasks:
@@ -58,7 +69,14 @@ class BotTasks:
 
     """
 
-    def task_news_notification(self, name, task):
+    def task_news_notification(self, name: str, task: dict) -> None:
+        """
+        Task to fetch and process news notifications.
+        
+        Args:
+            name (str): The name of the task.
+            task (dict): Task configuration parameters.
+        """
         threading.Timer(task.get('time'), getattr(self, name), args=[name, task]).start()
         resp = self.contactAPI(task.get('api_url'))
         newsNotifications = {}
@@ -71,7 +89,14 @@ class BotTasks:
         self.setNewsNotifications(newsNotifications)
 
 
-    def task_release_feed(self, name, task):
+    def task_release_feed(self, name: str, task: dict) -> None:
+        """
+        Task to fetch and process release notes feed.
+        
+        Args:
+            name (str): The name of the task.
+            task (dict): Task configuration parameters.
+        """
         threading.Timer(task.get('time'), getattr(self, name), args=[name, task]).start()
         releaseNotes = []
 
@@ -83,7 +108,7 @@ class BotTasks:
                 print('[DEBUG][task_release_feed] Release notes file exists: %s' % self.releaseNotesPath)
                 print('[DEBUG][task_release_feed] Using existing release notes file instead of fetching new data.')
 
-        else:    
+        else:
             try:
                 if self.maxReleaseNotes > 10:   
                     for i in range(0, self.maxReleaseNotes, 10):
@@ -128,7 +153,14 @@ class BotTasks:
                 self.setReleaseFeed([])
 
 
-    def task_news_feed(self, name, task):
+    def task_news_feed(self, name: str, task: dict) -> None:
+        """
+        Task to fetch and process news articles feed.
+        
+        Args:
+            name (str): The name of the task.
+            task (dict): Task configuration parameters.
+        """
         threading.Timer(task.get('time'), getattr(self, name), args=[name, task]).start()
         if self.maxNewsAricles > 10:   
             news=[]
@@ -171,7 +203,14 @@ class BotTasks:
             print(json.dumps(news, indent=4) +"\n\nNum articals: " + str(len(news)))   
 
 
-    def task_system_status(self, name, task):
+    def task_system_status(self, name: str, task: dict) -> None:
+        """
+        Task to fetch and process system status information.
+        
+        Args:
+            name (str): The name of the task.
+            task (dict): Task configuration parameters.
+        """
         threading.Timer(task.get('time'), getattr(self, name), args=[name, task]).start()
         resp = self.contactAPI(task.get('api_url'))
         if resp:
@@ -194,7 +233,14 @@ class BotTasks:
             if self.debug and 'task_system_status' in BotGlobals.DEBUG_MODULES:
                 print(json.dumps(out, indent=4) +"\n\nNum outages: " + str(len(outages)))
 
-    def task_shards(self, name, task):
+    def task_shards(self, name: str, task: dict) -> None:
+        """
+        Task to fetch and process shard information (oceans, fleets, invasions).
+        
+        Args:
+            name (str): The name of the task.
+            task (dict): Task configuration parameters.
+        """
         threading.Timer(task.get('time'), getattr(self, name), args=[name, task]).start()
         resp = self.contactAPI(task.get('api_url'))
         if resp:
@@ -240,9 +286,15 @@ class BotTasks:
                     print(json.dumps(populations, indent=4) +"\n\nNum populations: " + str(len(populations)))
 
     ## Other task functions.
-    def contactAPI(self, apiUrl):
+    def contactAPI(self, apiUrl: str) -> dict | None:
         """
         Contacts API and return its response in JSON format.
+        
+        Args:
+            apiUrl (str): The API URL to contact.
+            
+        Returns:
+            dict or None: The API response or None if failed.
         """
 
         r = requests.get(apiUrl)
@@ -259,10 +311,10 @@ class BotTasks:
     def translate_news_feed(self, news: list) -> list:
         """
         Translate the news feed using the BotTranslate class.
-
+        
         Args:
             news (list): The news feed to translate.
-
+            
         Returns:
             list: The translated news feed.
         """
@@ -297,10 +349,10 @@ class BotTasks:
     def get_release_notes(self, url: str) -> dict:
         """
         Scrapes the release notes from the TLOPO website.
-
+        
         Args:
             url (str): The URL to scrape for release notes.
-
+            
         Returns:
             dict: The release notes data.
         """
@@ -400,16 +452,15 @@ class BotTasks:
             print("Fatal error in get_release_notes: %s" % str(e))
             return release_data  # Return the default structure in case of error
 
-    def create_release_notes_file(self) -> str:
+    def create_release_notes_file(self) -> str | None:
         """
         Create a file with the release notes.
-
+        
         Uses the format BotReleaseNotes_<language>_<version>.json where <version> is the latest release version.
-
         Used to speed up the process of getting the release notes on initialization.
-
+        
         Returns:
-            str: The path to the created file.
+            str or None: The path to the created file, or None if creation failed.
         """
 
         try:
@@ -438,10 +489,10 @@ class BotTasks:
     def translate_release_notes(self, release: list) -> list:
         """
         Translate the release notes using the BotTranslate class.
-
+        
         Args:
             release (list): The release notes to translate.
-
+            
         Returns:
             list: The translated release notes.
         """
@@ -490,15 +541,15 @@ class BotTasks:
             print("Error translating release notes: %s" % str(e))
             return release  # Return original if translation fails
     
-    def translate_news_notifications(self, notification: list|None) -> list|None:
+    def translate_news_notifications(self, notification: dict | None) -> dict | None:
         """
         Translate the news notifications using the BotTranslate class.
-
+        
         Args:
-            news (list): The news notifications to translate.
-
+            notification (dict or None): The news notifications to translate.
+            
         Returns:
-            list: The translated news notifications.
+            dict or None: The translated news notifications.
         """
 
         if notification: 
@@ -517,66 +568,95 @@ class BotTasks:
                     print('[DEBUG][translate_news_notifications] No news notifications to translate.')
 
             return None
+        
+    
 
-    def setActiveFleets(self, fleets):
+    def setActiveFleets(self, fleets: dict) -> None:
         """
         Set active fleets.
+        
+        Args:
+            fleets (dict): The active fleets to set.
         """
 
         self.activeFleets = fleets
 
-    def getActiveFleets(self):
+    def getActiveFleets(self) -> dict:
         """
         Get active fleets.
+        
+        Returns:
+            dict: The active fleets.
         """
 
         return self.activeFleets
 
-    def setSystemStatus(self, status):
+    def setSystemStatus(self, status: dict) -> None:
         """
         Set system status.
+        
+        Args:
+            status (dict): The system status to set.
         """
 
         self.systemStatus = status
 
-    def getSystemStatus(self):
+    def getSystemStatus(self) -> dict:
         """
         Get system status.
+        
+        Returns:
+            dict: The system status.
         """
 
         return self.systemStatus
 
-    def setActiveInvasions(self, invasions):
+    def setActiveInvasions(self, invasions: dict) -> None:
         """
         Set active invasions.
+        
+        Args:
+            invasions (dict): The active invasions.
         """
 
         self.activeInvasions = invasions
 
-    def getActiveInvasions(self):
+    def getActiveInvasions(self) -> dict:
         """
         Get active invasions.
+        
+        Returns:
+            dict: The active invasions.
         """
 
         return self.activeInvasions
 
-    def setOceanPopulations(self, populations):
+    def setOceanPopulations(self, populations: dict) -> None:
         """
         Set ocean populations.
+        
+        Args:
+            populations (dict): The ocean populations.
         """
 
         self.oceanPopulations = populations
 
-    def getOceanPopulations(self):
+    def getOceanPopulations(self) -> dict:
         """
         Get ocean populations.
+        
+        Returns:
+            dict: The ocean populations.
         """
 
         return self.oceanPopulations
     
-    def setNewsFeed(self, news):
+    def setNewsFeed(self, news: list) -> None:
         """
         Set news feed.
+        
+        Args:
+            news (list): The news feed articles.
         """
 
         if BotLocalizer.AUTOTRANSLATE_IN_USE:
@@ -584,16 +664,22 @@ class BotTasks:
         else:
             self.newsFeed = news
 
-    def getNewsFeed(self):
+    def getNewsFeed(self) -> list:
         """
         Get news feed.
+        
+        Returns:
+            list: The news feed articles.
         """
 
         return self.newsFeed
     
-    def setReleaseFeed(self, releaseFeed):
+    def setReleaseFeed(self, releaseFeed: list) -> None:
         """
         Set release feed.
+        
+        Args:
+            releaseFeed (list): The release feed to set.
         """
 
         if BotLocalizer.AUTOTRANSLATE_IN_USE:
@@ -603,9 +689,12 @@ class BotTasks:
         
         self.create_release_notes_file()
 
-    def getReleaseFeed(self):
+    def getReleaseFeed(self) -> list | None:
         """
         Get release feed.
+        
+        Returns:
+            list or None: The release feed data.
         """
 
         try:  
@@ -617,19 +706,104 @@ class BotTasks:
                 print(f"[DEBUG][getReleaseFeed] Error: {str(e)}. Using in-memory data.")
             return self.releaseFeed
 
-    def setNewsNotifications(self, newsNotifications: dict|None):
+    def setNewsNotifications(self, newsNotifications: dict | None) -> None:
         """
         Set news notifications.
+        
+        Args:
+            newsNotifications (dict or None): The news notifications.
         """
+
         if BotLocalizer.AUTOTRANSLATE_IN_USE:
             self.newsNotifications = self.translate_news_notifications(newsNotifications)
         else:
             self.newsNotifications = newsNotifications
     
-    def getNewsNotifications(self):
+    def getNewsNotifications(self) -> dict | None:
         """
         Get news notifications.
+        
+        Returns:
+            dict or None: The news notifications.
         """
 
         return self.newsNotifications
+    
+    def hasStatusChanged(self) -> bool:
+        """
+        Check if server status has changed since last check.
+        
+        Returns:
+            bool: True if status has changed, False otherwise.
+        """
+        current_status = self.getSystemStatus()
+        current_hash = hash(str(current_status))
+        
+        if not hasattr(self, '_last_status_hash'):
+            self._last_status_hash = current_hash
+            return False
+        
+        if current_hash != self._last_status_hash:
+            self._last_status_hash = current_hash
+
+            if self.debug and 'hasStatusChanged' in BotGlobals.DEBUG_MODULES:
+                print('[DEBUG][hasStatusChanged] Status changed: %s' % current_status)
+
+            return True
+        
+        return False
+
+    def hasNewsChanged(self) -> bool:
+        """
+        Check if news has changed since last check.
+        
+        Returns:
+            bool: True if news has changed, False otherwise.
+        """
+        current_news = self.getNewsFeed()
+        if not current_news:
+            return False
+            
+        current_hash = hash(str(current_news[0]))
+        
+        if not hasattr(self, '_last_news_hash'):
+            self._last_news_hash = current_hash
+            return False
+        
+        if current_hash != self._last_news_hash:
+            self._last_news_hash = current_hash
+
+            if self.debug and 'hasNewsChanged' in BotGlobals.DEBUG_MODULES:
+                print('[DEBUG][hasNewsChanged] News changed: %s' % current_news)
+
+            return True
+        
+        return False
+
+    def hasReleasesChanged(self) -> bool:
+        """
+        Check if releases have changed since last check.
+        
+        Returns:
+            bool: True if releases have changed, False otherwise.
+        """
+        current_releases = self.getReleaseFeed()
+        if not current_releases:
+            return False
+            
+        current_hash = hash(str(current_releases[0]))  # Check just the latest release
+        
+        if not hasattr(self, '_last_releases_hash'):
+            self._last_releases_hash = current_hash
+            return False
+        
+        if current_hash != self._last_releases_hash:
+            self._last_releases_hash = current_hash
+
+            if self.debug and 'hasReleasesChanged' in BotGlobals.DEBUG_MODULES:
+                print('[DEBUG][hasReleasesChanged] Releases changed: %s' % current_releases)
+                
+            return True
+        
+        return False
 
