@@ -11,10 +11,13 @@ class NewsButtons(discord.ui.View):
     This class handles the creation of news articles and their buttons.
     """
 
-    def __init__(self, news: list = None, article_number: int = 0):
+    def __init__(self, news: list = None, article_number: int = 0, is_static: bool = False):
         super().__init__()
         self.article_number = article_number
         self.news = news
+
+        if is_static:
+            self.clear_items()
 
     def create_news_embed(self) -> discord.Embed:
         """
@@ -92,10 +95,12 @@ class ReleaseButtons(discord.ui.View):
     This class handles the creation of release notes and their buttons.
     """
 
-    def __init__(self, releases: list = None, release_number: int = 0):
+    def __init__(self, releases: list = None, release_number: int = 0, is_static: bool = False):
         super().__init__()
         self.release_number = release_number
         self.releases = releases
+        if is_static:
+            self.clear_items()
 
     def create_release_embed(self) -> discord.Embed:
         """

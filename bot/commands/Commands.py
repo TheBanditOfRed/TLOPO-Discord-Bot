@@ -452,6 +452,9 @@ class Commands(commands.Cog):
         name='static',
         description= 'Create a static embed.'
     )
+    @commands.has_guild_permissions(manage_messages=True)
+    @commands.has_permissions(manage_messages=True)
+    @app_commands.default_permissions(manage_messages=True)
     @app_commands.choices(module=[
         app_commands.Choice(name='status', value='status'),
         app_commands.Choice(name='status-detailed', value='status-detailed'),
@@ -512,11 +515,11 @@ class Commands(commands.Cog):
             await self.staticEmbedMgr.add_reference('status-detailed', message)
             await ctx.send(returnMsg, ephemeral=True, delete_after=5)
         elif module == 'news':
-            message = await self.news_embed(ctx)
+            message = await self.news_embed(ctx, True)
             await self.staticEmbedMgr.add_reference('news', message)
             await ctx.send(returnMsg, ephemeral=True, delete_after=5)
         elif module == 'releases':
-            message = await self.releases_embed(ctx)
+            message = await self.releases_embed(ctx, True)
             await self.staticEmbedMgr.add_reference('releases', message)
             await ctx.send(returnMsg, ephemeral=True, delete_after=5)
         else:
@@ -535,27 +538,49 @@ class Commands(commands.Cog):
         """
 
         try:
+            system_status = self.taskMgr.getSystemStatus()
+
             if self.taskMgr.hasStatusChanged():
-                status_embed = await self._create_status_embed()
+                status_embed = await self.status_embed()
                 updated, failed = await self.staticEmbedMgr.update_all_embeds('status', status_embed)
-                print('Updated %s status embeds, %s failed' % (updated, failed))
+                print('[STATIC UPDATE] Updated %s status embeds, %s failed' % (updated, failed))
                 
-                fullstatus_embed = await self._create_fullstatus_embed()
+                fullstatus_embed = await self.fullstatus_embed()
                 updated, failed = await self.staticEmbedMgr.update_all_embeds('status-detailed', fullstatus_embed)
-                print('Updated %s detailed status embeds, %s failed' % (updated, failed))
+                print('[STATIC UPDATE] Updated %s detailed status embeds, %s failed' % (updated, failed))
             
-            if self.taskMgr.hasNewsChanged():
-                news_embed = await self._create_news_embed()
-                updated, failed = await self.staticEmbedMgr.update_all_embeds('news', news_embed)
-                print('Updated %s news embeds, %s failed' % (updated, failed))
+            if system_status.get('status', 0) == 3:
+                offline_embed = discord.Embed(
+                    title=BotGlobals.FORMAT_STRINGS.get('bold') % BotLocalizer.EMBED_TITLES[11],
+                    description=BotLocalizer.STATUS_MESSAGES[8],
+                    color=BotGlobals.EMBED_COLOR.get('offline')
+                )
+
+                if self.taskMgr.hasNewsChanged():
+                    updated, failed = await self.staticEmbedMgr.update_all_embeds('news', offline_embed)
+                    print('[STATIC UPDATE] Updated %s news embeds (offline), %s failed' % (updated, failed))
+                
+                if self.taskMgr.hasReleasesChanged():
+                    updated, failed = await self.staticEmbedMgr.update_all_embeds('releases', offline_embed)
+                    print('[STATIC UPDATE] Updated %s release embeds (offline), %s failed' % (updated, failed))
             
-            if self.taskMgr.hasReleasesChanged():
-                releases_embed = await self._create_releases_embed() 
-                updated, failed = await self.staticEmbedMgr.update_all_embeds('releases', releases_embed)
-                print('Updated %s release embeds, %s failed' % (updated, failed))
+            else:
+                if self.taskMgr.hasNewsChanged():
+                    news = self.taskMgr.getNewsFeed()
+                    view = Buttons.NewsButtons(news=news, is_static=True)
+                    news_embed = view.create_news_embed()
+                    updated, failed = await self.staticEmbedMgr.update_all_embeds('news', news_embed)
+                    print('[STATIC UPDATE] Updated %s news embeds, %s failed' % (updated, failed))
+                
+                if self.taskMgr.hasReleasesChanged():
+                    releases = self.taskMgr.getReleaseFeed()
+                    view = Buttons.ReleaseButtons(releases=releases, is_static=True)
+                    releases_embed = view.create_release_embed()
+                    updated, failed = await self.staticEmbedMgr.update_all_embeds('releases', releases_embed)
+                    print('[STATIC UPDATE] Updated %s release embeds, %s failed' % (updated, failed))
     
         except Exception as e:
-            print('Error in update task: %s' % e)
+            print('[STATIC UPDATE] Error in update task: %s' % e)
 
     # On rare occasions the bot innitilizes the commands before the bot is even ready and bugs out, no clue why but this fixes it.
     @check_for_updates.before_loop
@@ -783,7 +808,7 @@ class Commands(commands.Cog):
 
         return await ctx.send(embed=embed)
 
-    async def news_embed(self, ctx):
+    async def news_embed(self, ctx, is_static=False):
         """
         Creates the news embed.
         """
@@ -800,12 +825,12 @@ class Commands(commands.Cog):
             return await ctx.send(embed=embed)
         
         else:
-            view = Buttons.NewsButtons(news)
+            view = Buttons.NewsButtons(news=news, is_static=is_static)
             embed = view.create_news_embed()
 
             return await ctx.send(embed=embed, view=view)
     
-    async def releases_embed(self, ctx):
+    async def releases_embed(self, ctx, is_static=False):
         """
         Creates the releases embed.
         """
@@ -822,7 +847,7 @@ class Commands(commands.Cog):
             return await ctx.send(embed=embed)
         
         else:
-            view = Buttons.ReleaseButtons(releases)
+            view = Buttons.ReleaseButtons(releases=releases, is_static=is_static)
 
             embed = view.create_release_embed()
 
